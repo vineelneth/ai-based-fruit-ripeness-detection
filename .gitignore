@@ -1,0 +1,16 @@
+# Ignore datasets and images
+dataset/
+*.jpg
+*.jpeg
+*.png
+*.csv
+
+# Ignore saved Machine Learning models
+*.keras
+*.h5
+*.pb
+
+# Ignore Python environment stuff
+__pycache__/
+.venv/
+venv/
