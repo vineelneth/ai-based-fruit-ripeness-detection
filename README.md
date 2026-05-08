@@ -153,10 +153,17 @@ fruit_ripeness_detection/
 
 ## Demo
 
-The model overlays ripeness predictions directly on the fruit image:
+Live predictions — ripeness percentage and estimated days to peak ripeness on unseen fruit images:
+
+![Demo](demo.gif)
+
+<details>
+<summary>Static prediction examples</summary>
 
 ![Prediction example 1](Screenshot%202026-03-21%20144756.png)
 ![Prediction example 2](Screenshot%202026-03-21%20144809.png)
+
+</details>
 
 ## Tech Stack
 
