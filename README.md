@@ -71,8 +71,8 @@ Labels are derived heuristically from folder names:
 ### Install dependencies
 
 ```bash
-git clone https://github.com/vineelneth/fruit-ripeness-detection.git
-cd fruit-ripeness-detection
+git clone https://github.com/vineelneth/ai-based-fruit-ripeness-detection.git
+cd ai-based-fruit-ripeness-detection
 pip install -r requirements.txt
 ```
 
@@ -151,6 +151,13 @@ fruit_ripeness_detection/
 └── README.md
 ```
 
+## Demo
+
+The model overlays ripeness predictions directly on the fruit image:
+
+![Prediction example 1](Screenshot%202026-03-21%20144756.png)
+![Prediction example 2](Screenshot%202026-03-21%20144809.png)
+
 ## Tech Stack
 
 - **TensorFlow / Keras** — model training and inference
@@ -159,3 +166,10 @@ fruit_ripeness_detection/
 - **Pandas** — CSV data loading
 - **Matplotlib** — training curves and result visualization
 - **Tkinter** — GUI file picker (built-in Python)
+
+## Roadmap
+
+- [ ] Webcam integration for real-time detection
+- [ ] Expand to more fruit types (bananas, mangoes, citrus)
+- [ ] Export to TensorFlow Lite for mobile deployment
+- [ ] REST API wrapper for integration into inventory systems
