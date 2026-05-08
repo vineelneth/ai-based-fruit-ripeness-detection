@@ -1,16 +1,38 @@
-# Ignore datasets and images
-dataset/
-*.jpg
-*.jpeg
-*.png
-*.csv
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.env
+.venv
+env/
+venv/
+ENV/
 
-# Ignore saved Machine Learning models
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Dataset (download separately — see README)
+dataset/
+
+# Trained models (large binaries)
 *.keras
 *.h5
 *.pb
+saved_model/
 
-# Ignore Python environment stuff
-__pycache__/
-.venv/
-venv/
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

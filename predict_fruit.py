@@ -1,91 +1,102 @@
+"""
+Run ripeness predictions on fruit images.
+
+GUI mode (default): opens a file-picker dialog; loops until you click Cancel.
+CLI mode:           pass --image <path> to predict a single image non-interactively.
+"""
+
+import argparse
+import os
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
 from tensorflow import keras
 from tensorflow.keras.preprocessing import image
-import numpy as np
-import os
-import tkinter as tk
-from tkinter import filedialog
-import matplotlib.pyplot as plt
-
-# Load the new regression model
-model = keras.models.load_model("fruit_freshness_regression.keras")
-print("Regression Model loaded successfully.\n")
 
 
-# Predict single image
-def predict_fruit(img_path):
-    # Load and preprocess image for the AI
-    test_img = image.load_img(img_path, target_size=(192, 192))
-    test_img_array = image.img_to_array(test_img)
-    test_img_array = np.expand_dims(test_img_array, axis=0) / 255.0
+def load_model(model_path: str):
+    if not os.path.exists(model_path):
+        sys.exit(f"Error: model file not found at '{model_path}'")
+    model = keras.models.load_model(model_path)
+    print(f"Model loaded from {model_path}\n")
+    return model
 
-    # Predict the raw numbers
-    preds = model.predict(test_img_array, verbose=0)[0]
 
-    # Extract the two values from the prediction array
-    ripeness_pct = preds[0]
-    days_to_ripe = preds[1]
+def predict_fruit(model, img_path: str, show_plot: bool = True) -> dict:
+    img = image.load_img(img_path, target_size=(192, 192))
+    arr = np.expand_dims(image.img_to_array(img), axis=0) / 255.0
 
-    # Formatting constraints
-    ripeness_pct = np.clip(ripeness_pct, 0, 100)
-    days_to_ripe = max(0, days_to_ripe)
+    preds = model.predict(arr, verbose=0)[0]
+    ripeness_pct = float(np.clip(preds[0], 0, 100))
+    days_to_ripe = float(max(0.0, preds[1]))
 
-    # Determine Status
-    filename = os.path.basename(img_path)
-    if ripeness_pct >= 95:
-        status = "Fully Ripe / Overripe"
-        title_color = "red"
-    else:
-        status = "Unripe / Ripening"
-        title_color = "green"
+    status = "Fully Ripe / Overripe" if ripeness_pct >= 95 else "Unripe / Ripening"
+    title_color = "red" if ripeness_pct >= 95 else "green"
 
-    # 1. Print the result to the Terminal
-    print(f"--- {filename} ---")
+    print(f"--- {os.path.basename(img_path)} ---")
     print(f"Status:       {status}")
     print(f"Ripeness:     {ripeness_pct:.1f}%")
     print(f"Days to Ripe: {days_to_ripe:.1f} days\n")
 
-    # 2. Show the result visually on the Image
-    display_img = image.load_img(img_path)  # Load original high-res image
-    plt.figure(figsize=(6, 6))
-    plt.imshow(display_img)
-    plt.axis("off")  # Hide the graph lines and numbers
+    if show_plot:
+        display_img = image.load_img(img_path)
+        plt.figure(figsize=(6, 6))
+        plt.imshow(display_img)
+        plt.axis("off")
+        plt.title(
+            f"Status: {status}\nRipeness: {ripeness_pct:.1f}%\nEst. Days to Ripe: {days_to_ripe:.1f}",
+            fontsize=14,
+            color=title_color,
+            fontweight="bold",
+            pad=15,
+        )
+        plt.tight_layout()
+        plt.show()
 
-    # Create the text block for the top of the image
-    title_text = f"Status: {status}\nRipeness: {ripeness_pct:.1f}%\nEst. Days to Ripe: {days_to_ripe:.1f}"
-
-    # Display the window
-    plt.title(title_text, fontsize=14, color=title_color, fontweight="bold", pad=15)
-    plt.tight_layout()
-    plt.show()  # Code pauses here until you close the image window
+    return {"status": status, "ripeness_pct": ripeness_pct, "days_to_ripe": days_to_ripe}
 
 
-# --- Visual File Picker Loop ---
-def run_prediction_loop():
-    # Set up the hidden tkinter window ONCE outside the loop
+def run_gui_loop(model) -> None:
+    import tkinter as tk
+    from tkinter import filedialog
+
     root = tk.Tk()
     root.withdraw()
 
     print("=" * 40)
-    print("Fruit Predictor Started!")
+    print("Fruit Predictor — GUI mode")
     print("Click 'Cancel' in the file picker to exit.")
-    print("=" * 40)
+    print("=" * 40 + "\n")
 
-    # Start the continuous loop
     while True:
-        # Open the file explorer dialog
-        file_path = filedialog.askopenfilename(
-            title="Select a Fruit Image (Click 'Cancel' to Stop)",
-            filetypes=[("Image Files", "*.jpg *.jpeg *.png")],
+        path = filedialog.askopenfilename(
+            title="Select a fruit image (Cancel to exit)",
+            filetypes=[("Image files", "*.jpg *.jpeg *.png")],
         )
-
-        # If a file was selected, run the prediction
-        if file_path:
-            predict_fruit(file_path)
-        # If no file was selected (User clicked Cancel), break the loop
+        if path:
+            predict_fruit(model, path)
         else:
-            print("\nPrediction loop stopped. Have a great day!")
+            print("Exiting. Have a great day!")
             break
 
 
-# Run the application
-run_prediction_loop()
+def main():
+    parser = argparse.ArgumentParser(description="Predict fruit ripeness from an image.")
+    parser.add_argument("--image", metavar="PATH", help="Image path for CLI prediction (omit for GUI mode)")
+    parser.add_argument("--model", default="fruit_freshness_regression.keras", help="Trained model file")
+    parser.add_argument("--no-plot", action="store_true", help="Suppress matplotlib output (CLI mode only)")
+    args = parser.parse_args()
+
+    model = load_model(args.model)
+
+    if args.image:
+        if not os.path.exists(args.image):
+            sys.exit(f"Error: image not found at '{args.image}'")
+        predict_fruit(model, args.image, show_plot=not args.no_plot)
+    else:
+        run_gui_loop(model)
+
+
+if __name__ == "__main__":
+    main()
