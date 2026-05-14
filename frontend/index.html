@@ -5,51 +5,371 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FreshScan — AI Fruit Ripeness Detector</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
   <style>
+    /* ── Tokens ─────────────────────────────────────────────── */
     :root {
-      --green-deep:   #1B4332;
-      --green-mid:    #2D6A4F;
-      --green-light:  #52B788;
-      --green-pale:   #D8F3DC;
-      --amber:        #F59E0B;
-      --orange:       #F97316;
-      --slate:        #64748B;
-      --bg:           #F4FAF6;
+      --green-deep:    #1B4332;
+      --green-mid:     #2D6A4F;
+      --green-light:   #52B788;
+      --green-pale:    #D8F3DC;
+      --green-faint:   #F0FAF4;
+      --amber:         #F59E0B;
+      --orange:        #F97316;
+      --slate:         #64748B;
+      --bg:            #F6FAF7;
+      --card-bg:       #FFFFFF;
+      --border:        #E5E7EB;
+      --border-light:  #F3F4F6;
+      --text-primary:  #111827;
+      --text-secondary:#6B7280;
+      --text-muted:    #9CA3AF;
+      --radius-sm:     0.5rem;
+      --radius-md:     0.75rem;
+      --radius-lg:     1rem;
+      --radius-xl:     1.25rem;
+      --shadow-sm:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:     0 4px 20px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+      --shadow-lg:     0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.04);
     }
 
-    * { box-sizing: border-box; }
+    /* ── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background: var(--bg);
-      color: #1a1a1a;
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Drop zone ─────────────────────────────────────── */
+    /* ── Layout ─────────────────────────────────────────────── */
+    .page-wrapper   { flex: 1; display: flex; flex-direction: column; }
+    .container      { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 1.25rem; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .site-header {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .site-header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .logo-icon    { font-size: 1.4rem; line-height: 1; }
+    .logo-name    { font-weight: 800; font-size: 1.1rem; color: var(--green-deep); letter-spacing: -0.03em; }
+    .logo-badge   {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
+      background: var(--green-pale); color: var(--green-mid);
+      padding: 2px 7px; border-radius: 9999px; text-transform: uppercase;
+    }
+    .gh-link {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.82rem; font-weight: 500; color: var(--slate);
+      text-decoration: none;
+      padding: 6px 10px; border-radius: var(--radius-sm);
+      transition: background 0.15s, color 0.15s;
+    }
+    .gh-link:hover { background: var(--green-faint); color: var(--green-mid); }
+
+    /* ── Main ───────────────────────────────────────────────── */
+    .main-content { flex: 1; padding: 2.5rem 0 3rem; }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2rem);
+      font-weight: 800;
+      color: var(--green-deep);
+      letter-spacing: -0.035em;
+      line-height: 1.15;
+      margin-bottom: 0.5rem;
+    }
+    .hero p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ── Card shell ─────────────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ── Drop zone ──────────────────────────────────────────── */
     .drop-zone {
-      border: 2px dashed #A7C8B4;
-      border-radius: 1rem;
-      background: #fff;
+      border: 2px dashed #B8D8C4;
+      border-radius: var(--radius-xl);
+      background: var(--card-bg);
       cursor: pointer;
-      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       user-select: none;
+      outline: none;
     }
-    .drop-zone:hover { border-color: var(--green-mid); background: #F0FAF4; }
+    .drop-zone:hover  { border-color: var(--green-light); background: var(--green-faint); box-shadow: var(--shadow-sm); }
+    .drop-zone:focus  { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
     .drop-zone.drag-over {
-      border-color: var(--green-light);
+      border-color: var(--green-mid);
       background: var(--green-pale);
-      transform: scale(1.01);
+      box-shadow: 0 0 0 3px rgba(45,106,79,0.15);
     }
 
-    /* ── Progress bar ───────────────────────────────────── */
+    /* ── Drop idle state ────────────────────────────────────── */
+    .drop-idle {
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .drop-icon-wrap {
+      width: 64px; height: 64px;
+      background: var(--green-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .drop-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+    .drop-sub   { font-size: 0.875rem; color: var(--text-muted); }
+    .drop-hint  { font-size: 0.75rem; color: #D1D5DB; margin-top: 0.25rem; letter-spacing: 0.02em; }
+
+    /* ── Drop preview state ─────────────────────────────────── */
+    .drop-preview {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /*
+     * FIX: The image preview container.
+     * Fixed height with flexbox centering ensures the image
+     * never overflows, never crops, and always shows in full.
+     * object-fit: contain on img + auto dimensions = letterboxed properly.
+     */
+    .preview-img-wrap {
+      width: 100%;
+      height: 220px;
+      background: #F8FAF9;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #preview-img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      display: block;
+    }
+
+    .preview-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    /* ── Error banner ───────────────────────────────────────── */
+    .error-banner {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius-sm);
+      color: #991B1B;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-top: 0.75rem;
+      display: none;
+    }
+    .error-banner.visible { display: block; }
+
+    /* ── Loading state ──────────────────────────────────────── */
+    .loading-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      padding: 3.5rem 2rem;
+      text-align: center;
+    }
+    .loading-wrap.visible { display: flex; }
+
+    .spinner-ring {
+      width: 48px; height: 48px;
+      border: 3px solid var(--green-pale);
+      border-top-color: var(--green-mid);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-dots {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-top: 0.25rem;
+    }
+    .loading-dots span {
+      width: 6px; height: 6px;
+      background: var(--green-light);
+      border-radius: 50%;
+      animation: dot-bounce 1.2s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%            { transform: translateY(-6px); opacity: 1; }
+    }
+    .loading-title { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); }
+    .loading-sub   { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ── Results section ────────────────────────────────────── */
+    .results-wrap { display: none; }
+    .results-wrap.visible {
+      display: block;
+      animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /*
+     * FIX: Result image uses contain, not cover.
+     * object-fit: cover was cropping/zooming portrait images.
+     * Now shows the full fruit image with a neutral background.
+     */
+    .result-img-wrap {
+      width: 100%;
+      height: 260px;
+      background: #F8FAF9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-light);
+      overflow: hidden;
+    }
+    #result-img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .result-body { padding: 1.5rem; }
+
+    /* Result header: filename + badge */
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .result-filename {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Badge ──────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .badge-unripe   { background: #E2E8F0; color: #334155; }
+    .badge-ripening { background: #FEF3C7; color: #92400E; }
+    .badge-ripe     { background: #DCFCE7; color: #166534; }
+    .badge-overripe { background: #FFEDD5; color: #9A3412; }
+
+    /* ── Ripeness score block ───────────────────────────────── */
+    .score-block { margin-bottom: 1.5rem; }
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .score-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    #ripeness-value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--green-deep);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
     .progress-track {
       background: #E5E7EB;
       border-radius: 9999px;
-      height: 12px;
+      height: 10px;
       overflow: hidden;
     }
     .progress-fill {
@@ -57,459 +377,473 @@
       border-radius: 9999px;
       width: 0%;
       transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1),
-                  background-color 0.4s ease;
+                  background-color 0.3s ease;
     }
 
-    /* ── Status badges ──────────────────────────────────── */
-    .badge {
+    /* ── Stat cards ─────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    /* ── Insight box ────────────────────────────────────────── */
+    .insight-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 1.25rem;
+    }
+    .insight-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    #insight-text { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55; }
+
+    /* ── Buttons ────────────────────────────────────────────── */
+    .btn {
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 14px;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+      justify-content: center;
     }
-    .badge-unripe      { background:#E2E8F0; color:#334155; }
-    .badge-ripening    { background:#FEF3C7; color:#92400E; }
-    .badge-ripe        { background:#D1FAE5; color:#065F46; }
-    .badge-overripe    { background:#FFEDD5; color:#9A3412; }
+    .btn:active { transform: scale(0.97); }
 
-    /* ── Spinner ────────────────────────────────────────── */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 44px; height: 44px;
-      border: 4px solid #D1FAE5;
-      border-top-color: var(--green-mid);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    /* ── Slide-up reveal ────────────────────────────────── */
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .slide-up { animation: slideUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both; }
-
-    /* ── Error banner ───────────────────────────────────── */
-    .error-banner {
-      background: #FEF2F2;
-      border: 1px solid #FECACA;
-      border-radius: 0.5rem;
-      color: #991B1B;
-      padding: 10px 16px;
-      font-size: 0.875rem;
-    }
-
-    /* ── Result image ───────────────────────────────────── */
-    .result-img {
-      width: 100%;
-      max-height: 240px;
-      object-fit: cover;
-      border-radius: 0.75rem;
-    }
-
-    /* ── Button styles ──────────────────────────────────── */
     .btn-primary {
       background: var(--green-mid);
       color: #fff;
-      border: none;
-      border-radius: 0.625rem;
-      padding: 12px 28px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
-      width: 100%;
+      padding: 11px 22px;
+      font-size: 0.95rem;
+      box-shadow: 0 1px 3px rgba(45,106,79,0.3);
     }
-    .btn-primary:hover  { background: var(--green-deep); }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-primary:disabled { background: #9CA3AF; cursor: not-allowed; }
+    .btn-primary:hover { background: var(--green-deep); box-shadow: 0 4px 12px rgba(45,106,79,0.35); }
+    .btn-primary:disabled { background: #9CA3AF; box-shadow: none; cursor: not-allowed; }
 
     .btn-secondary {
       background: transparent;
       color: var(--green-mid);
-      border: 2px solid var(--green-mid);
-      border-radius: 0.625rem;
-      padding: 10px 24px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
+      border: 1.5px solid var(--green-mid);
+      padding: 10px 18px;
+      font-size: 0.9rem;
     }
-    .btn-secondary:hover { background: var(--green-pale); }
+    .btn-secondary:hover { background: var(--green-faint); }
 
-    /* ── Stat cards ─────────────────────────────────────── */
-    .stat-card {
-      background: #F9FAFB;
-      border: 1px solid #E5E7EB;
-      border-radius: 0.75rem;
-      padding: 14px 16px;
+    .btn-full { width: 100%; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      background: var(--card-bg);
+      padding: 1.1rem;
+      text-align: center;
     }
+    .site-footer p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .site-footer a { color: var(--green-mid); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
 
-    /* ── Responsive preview image in upload zone ────────── */
-    #preview-img {
-      max-height: 200px;
-      max-width: 100%;
-      border-radius: 0.75rem;
-      object-fit: contain;
+    /* ── Utility ────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .main-content { padding: 1.75rem 0 2rem; }
+      .hero          { margin-bottom: 1.5rem; }
+      .drop-idle     { padding: 2.25rem 1.5rem; }
+      .preview-img-wrap { height: 180px; }
+      .result-img-wrap  { height: 220px; }
+      .hero h1       { font-size: 1.5rem; }
+      .preview-actions { flex-direction: column; }
     }
   </style>
 </head>
 
 <body>
+<div class="page-wrapper">
 
-  <!-- ── Header ───────────────────────────────────────────── -->
-  <header style="background:#fff; border-bottom:1px solid #E5E7EB;">
-    <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span style="font-size:1.5rem;">🍎</span>
-        <span style="font-weight:800; font-size:1.2rem; color:var(--green-deep); letter-spacing:-0.02em;">FreshScan</span>
-        <span style="font-size:0.7rem; background:var(--green-pale); color:var(--green-mid); padding:2px 8px; border-radius:9999px; font-weight:600; margin-left:4px;">BETA</span>
-      </div>
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="/" aria-label="FreshScan home">
+        <span class="logo-icon">🍎</span>
+        <span class="logo-name">FreshScan</span>
+        <span class="logo-badge">Beta</span>
+      </a>
       <a
+        class="gh-link"
         href="https://github.com/vineelneth/ai-based-fruit-ripeness-detection"
         target="_blank"
         rel="noopener"
-        style="font-size:0.85rem; color:var(--slate); text-decoration:none; display:flex; align-items:center; gap:5px;"
-        onmouseover="this.style.color='var(--green-mid)'"
-        onmouseout="this.style.color='var(--slate)'"
+        aria-label="View on GitHub"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
         GitHub
       </a>
     </div>
   </header>
 
-  <!-- ── Main ─────────────────────────────────────────────── -->
-  <main class="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
+  <!-- ── Main ───────────────────────────────────────────────── -->
+  <main class="main-content" id="main">
+    <div class="container">
 
-    <!-- Hero text -->
-    <div class="text-center mb-8">
-      <h1 style="font-size:2rem; font-weight:800; color:var(--green-deep); letter-spacing:-0.03em; line-height:1.2;" class="mb-2">
-        AI Fruit Ripeness Detector
-      </h1>
-      <p style="color:#6B7280; font-size:1rem;">
-        Upload any fruit photo for an instant ripeness score, status, and estimated days to peak.
-      </p>
-    </div>
-
-    <!-- ── Upload section ─────────────────────────────────── -->
-    <div id="upload-section">
-      <div
-        id="drop-zone"
-        class="drop-zone"
-        style="padding:2.5rem 1.5rem; text-align:center; min-height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem;"
-      >
-        <!-- Default drop content -->
-        <div id="drop-content">
-          <div style="font-size:3rem; line-height:1; margin-bottom:0.5rem;">📸</div>
-          <p style="font-weight:600; font-size:1.05rem; color:#374151; margin:0 0 4px;">
-            Drop your fruit image here
-          </p>
-          <p style="color:#9CA3AF; font-size:0.875rem; margin:0 0 16px;">
-            or click anywhere to browse
-          </p>
-          <p style="color:#D1D5DB; font-size:0.75rem; margin:0;">
-            JPEG · PNG · WebP &nbsp;·&nbsp; Max 10 MB
-          </p>
-        </div>
-
-        <!-- Preview content (hidden until file chosen) -->
-        <div id="preview-content" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:1rem;">
-          <img id="preview-img" src="" alt="Preview" />
-          <p id="preview-filename" style="font-size:0.8rem; color:#9CA3AF; margin:0;"></p>
-          <div style="display:flex; gap:10px; width:100%; max-width:320px;">
-            <button id="change-btn" class="btn-secondary" style="flex:1; padding:8px 12px; font-size:0.85rem;"
-              onclick="event.stopPropagation(); resetUpload();">
-              Change
-            </button>
-            <button id="analyze-btn" class="btn-primary" style="flex:2;"
-              onclick="event.stopPropagation(); analyze();">
-              Analyze Ripeness
-            </button>
-          </div>
-        </div>
+      <!-- Hero -->
+      <div class="hero">
+        <h1>AI Fruit Ripeness Detector</h1>
+        <p>Upload any fruit photo for an instant ripeness score, freshness status, and estimated days to peak.</p>
       </div>
 
-      <!-- Hidden file input -->
-      <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" />
+      <!-- ── Upload card ───────────────────────────────────── -->
+      <div id="upload-section">
 
-      <!-- Error message -->
-      <div id="error-msg" class="error-banner hidden mt-3"></div>
-    </div>
+        <!-- Drop zone -->
+        <div
+          id="drop-zone"
+          class="drop-zone"
+          role="button"
+          tabindex="0"
+          aria-label="Upload a fruit image — click or drag and drop"
+        >
+          <!-- Idle state -->
+          <div id="drop-idle" class="drop-idle">
+            <div class="drop-icon-wrap" aria-hidden="true">📸</div>
+            <p class="drop-title">Drop your fruit image here</p>
+            <p class="drop-sub">or click to browse your files</p>
+            <p class="drop-hint">JPEG · PNG · WebP &nbsp;·&nbsp; up to 10 MB</p>
+          </div>
 
-    <!-- ── Loading section ────────────────────────────────── -->
-    <div id="loading-section" class="hidden" style="text-align:center; padding:4rem 0;">
-      <div style="display:flex; flex-direction:column; align-items:center; gap:1.25rem;">
-        <div class="spinner"></div>
+          <!-- Preview state (hidden until file selected) -->
+          <div id="drop-preview" class="drop-preview hidden">
+            <div class="preview-img-wrap">
+              <img id="preview-img" src="" alt="Selected fruit preview" />
+            </div>
+            <p id="preview-filename" class="preview-meta"></p>
+            <div class="preview-actions">
+              <button
+                class="btn btn-secondary"
+                style="flex:1"
+                onclick="event.stopPropagation(); resetUpload();"
+              >Change</button>
+              <button
+                class="btn btn-primary"
+                style="flex:2"
+                onclick="event.stopPropagation(); analyze();"
+              >Analyze Ripeness</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden file input -->
+        <input
+          id="file-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="hidden"
+          aria-label="Select a fruit image"
+        />
+
+        <!-- Error -->
+        <div id="error-msg" class="error-banner" role="alert"></div>
+      </div>
+
+      <!-- ── Loading ───────────────────────────────────────── -->
+      <div id="loading-section" class="drop-zone loading-wrap" aria-live="polite" aria-label="Analyzing image">
+        <div class="spinner-ring" aria-hidden="true"></div>
         <div>
-          <p style="font-weight:600; color:#374151; margin:0 0 4px;">Analyzing your fruit…</p>
-          <p style="font-size:0.85rem; color:#9CA3AF; margin:0;">Running MobileNetV2 inference</p>
+          <p class="loading-title">Analyzing your fruit…</p>
+          <p class="loading-sub">Running MobileNetV2 inference</p>
+        </div>
+        <div class="loading-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
         </div>
       </div>
-    </div>
 
-    <!-- ── Results section ────────────────────────────────── -->
-    <div id="results-section" class="hidden slide-up">
+      <!-- ── Results ───────────────────────────────────────── -->
+      <div id="results-section" class="results-wrap">
+        <div class="card">
 
-      <!-- Result card -->
-      <div style="background:#fff; border-radius:1rem; border:1px solid #E5E7EB; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-
-        <!-- Image -->
-        <div style="background:#F9FAFB; border-bottom:1px solid #F3F4F6;">
-          <img id="result-img" src="" alt="Analyzed fruit" class="result-img" />
-        </div>
-
-        <!-- Result body -->
-        <div style="padding:1.5rem;">
-
-          <!-- Filename + badge -->
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:8px;">
-            <p id="result-filename" style="font-size:0.8rem; color:#9CA3AF; margin:0; font-weight:500;"></p>
-            <span id="status-badge" class="badge badge-ripe">Ripe</span>
+          <!-- Result image (FIX: object-fit contain, not cover) -->
+          <div class="result-img-wrap">
+            <img id="result-img" src="" alt="Analyzed fruit" />
           </div>
 
-          <!-- Ripeness score -->
-          <div style="margin-bottom:1.25rem;">
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-              <span style="font-size:0.85rem; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">Ripeness Score</span>
-              <span id="ripeness-value" style="font-size:2rem; font-weight:800; color:var(--green-deep); letter-spacing:-0.03em;">—</span>
+          <!-- Result body -->
+          <div class="result-body">
+
+            <!-- Filename + badge -->
+            <div class="result-header">
+              <span id="result-filename" class="result-filename"></span>
+              <span id="status-badge" class="badge badge-ripe">Ripe</span>
             </div>
-            <div class="progress-track">
-              <div id="progress-fill" class="progress-fill" style="background:var(--green-light);"></div>
+
+            <!-- Ripeness score + bar -->
+            <div class="score-block">
+              <div class="score-row">
+                <span class="score-label">Ripeness Score</span>
+                <span id="ripeness-value">—</span>
+              </div>
+              <div class="progress-track">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
             </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <p class="stat-label">Days to Peak</p>
+                <p id="days-value" class="stat-value">—</p>
+              </div>
+              <div class="stat-card">
+                <p class="stat-label">Status</p>
+                <p id="status-text" class="stat-value">—</p>
+              </div>
+            </div>
+
+            <!-- Insight -->
+            <div class="insight-box">
+              <span class="insight-icon" id="insight-icon" aria-hidden="true">💡</span>
+              <p id="insight-text"></p>
+            </div>
+
+            <!-- Reset -->
+            <button class="btn btn-secondary btn-full" onclick="resetFull()">
+              ← Analyze Another Fruit
+            </button>
+
           </div>
-
-          <!-- Stats row -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.5rem;">
-            <div class="stat-card">
-              <p style="font-size:0.75rem; color:#9CA3AF; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Days to Peak</p>
-              <p id="days-value" style="font-size:1.3rem; font-weight:700; color:#1a1a1a; margin:0;">—</p>
-            </div>
-            <div class="stat-card">
-              <p style="font-size:0.75rem; color:#9CA3AF; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Status</p>
-              <p id="status-text" style="font-size:1.05rem; font-weight:700; color:#1a1a1a; margin:0;">—</p>
-            </div>
-          </div>
-
-          <!-- Insight line -->
-          <p id="insight-text" style="font-size:0.875rem; color:#6B7280; background:#F9FAFB; border-radius:0.5rem; padding:10px 14px; margin-bottom:1.25rem;"></p>
-
-          <!-- Reset button -->
-          <button id="reset-btn" class="btn-secondary" style="width:100%;" onclick="resetFull();">
-            ← Analyze Another Fruit
-          </button>
         </div>
       </div>
-    </div>
 
+    </div>
   </main>
 
-  <!-- ── Footer ───────────────────────────────────────────── -->
-  <footer style="border-top:1px solid #E5E7EB; background:#fff; padding:1rem; text-align:center;">
-    <p style="font-size:0.78rem; color:#9CA3AF; margin:0;">
+  <!-- ── Footer ─────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <p>
       Powered by MobileNetV2 transfer learning &nbsp;·&nbsp;
-      <a href="https://github.com/vineelneth/ai-based-fruit-ripeness-detection"
-         target="_blank" rel="noopener"
-         style="color:var(--green-mid); text-decoration:none;">Open source</a>
+      <a href="https://github.com/vineelneth/ai-based-fruit-ripeness-detection" target="_blank" rel="noopener">
+        Open source
+      </a>
     </p>
   </footer>
 
-  <script>
-    // ─── Config ────────────────────────────────────────────────────────────────
-    // For local development: set this to 'http://localhost:8000'
-    // For production on Vercel: leave as '' (vercel.json rewrite handles routing)
-    const API_BASE = '';
+</div><!-- /page-wrapper -->
 
-    // ─── DOM refs ──────────────────────────────────────────────────────────────
-    const dropZone       = document.getElementById('drop-zone');
-    const dropContent    = document.getElementById('drop-content');
-    const previewContent = document.getElementById('preview-content');
-    const previewImg     = document.getElementById('preview-img');
-    const previewFilename= document.getElementById('preview-filename');
-    const fileInput      = document.getElementById('file-input');
-    const errorMsg       = document.getElementById('error-msg');
-    const uploadSection  = document.getElementById('upload-section');
-    const loadingSection = document.getElementById('loading-section');
-    const resultsSection = document.getElementById('results-section');
-    const resultImg      = document.getElementById('result-img');
-    const ripenessValue  = document.getElementById('ripeness-value');
-    const progressFill   = document.getElementById('progress-fill');
-    const statusBadge    = document.getElementById('status-badge');
-    const statusText     = document.getElementById('status-text');
-    const daysValue      = document.getElementById('days-value');
-    const insightText    = document.getElementById('insight-text');
-    const resultFilename = document.getElementById('result-filename');
+<script>
+  // ─── Config ──────────────────────────────────────────────────────────────────
+  // Local dev: change to 'http://localhost:8000'
+  // Production (Vercel): leave as '' — vercel.json rewrite handles it
+  const API_BASE = '';
 
-    let selectedFile = null;
+  // ─── DOM ─────────────────────────────────────────────────────────────────────
+  const dropZone       = document.getElementById('drop-zone');
+  const dropIdle       = document.getElementById('drop-idle');
+  const dropPreview    = document.getElementById('drop-preview');
+  const previewImg     = document.getElementById('preview-img');
+  const previewFilename= document.getElementById('preview-filename');
+  const fileInput      = document.getElementById('file-input');
+  const errorMsg       = document.getElementById('error-msg');
+  const uploadSection  = document.getElementById('upload-section');
+  const loadingSection = document.getElementById('loading-section');
+  const resultsSection = document.getElementById('results-section');
+  const resultImg      = document.getElementById('result-img');
+  const ripenessValue  = document.getElementById('ripeness-value');
+  const progressFill   = document.getElementById('progress-fill');
+  const statusBadge    = document.getElementById('status-badge');
+  const statusText     = document.getElementById('status-text');
+  const daysValue      = document.getElementById('days-value');
+  const insightText    = document.getElementById('insight-text');
+  const insightIcon    = document.getElementById('insight-icon');
+  const resultFilename = document.getElementById('result-filename');
 
-    // ─── Drag & drop wiring ────────────────────────────────────────────────────
-    dropZone.addEventListener('dragover', e => {
+  let selectedFile = null;
+
+  // ─── Drag & drop ─────────────────────────────────────────────────────────────
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+  });
+
+  dropZone.addEventListener('click', () => {
+    if (!dropPreview.classList.contains('hidden')) return;
+    fileInput.click();
+  });
+  dropZone.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && dropPreview.classList.contains('hidden')) {
       e.preventDefault();
-      dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) handleFileSelect(file);
-    });
-
-    dropZone.addEventListener('click', () => {
-      if (!previewContent.classList.contains('hidden')) return; // buttons handle their own clicks
       fileInput.click();
-    });
-
-    fileInput.addEventListener('change', e => {
-      if (e.target.files[0]) handleFileSelect(e.target.files[0]);
-    });
-
-    // ─── File selection ────────────────────────────────────────────────────────
-    const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
-
-    function handleFileSelect(file) {
-      if (!ACCEPTED_TYPES.has(file.type)) {
-        showError('Unsupported file type. Please upload a JPEG, PNG, or WebP image.');
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        showError('File is too large (max 10 MB). Please choose a smaller image.');
-        return;
-      }
-      selectedFile = file;
-      hideError();
-
-      const reader = new FileReader();
-      reader.onload = e => {
-        previewImg.src = e.target.result;
-        previewFilename.textContent = file.name;
-        dropContent.classList.add('hidden');
-        previewContent.classList.remove('hidden');
-        previewContent.style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
     }
+  });
 
-    // ─── Inference call ────────────────────────────────────────────────────────
-    async function analyze() {
-      if (!selectedFile) return;
-      hideError();
-      uploadSection.classList.add('hidden');
-      loadingSection.classList.remove('hidden');
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) handleFileSelect(e.target.files[0]);
+  });
 
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+  // ─── File selection ───────────────────────────────────────────────────────────
+  const ACCEPTED = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/predict`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = body.detail || `Server returned ${res.status}`;
-          if (res.status === 429) throw new Error('Rate limit reached. Please wait a minute and try again.');
-          if (res.status === 503) throw new Error('Model is still warming up — please try again in a few seconds.');
-          throw new Error(msg);
-        }
-
-        const data = await res.json();
-        showResults(data);
-      } catch (err) {
-        loadingSection.classList.add('hidden');
-        uploadSection.classList.remove('hidden');
-        showError(err.message || 'Something went wrong. Please try again.');
-      }
+  function handleFileSelect(file) {
+    if (!ACCEPTED.has(file.type)) {
+      showError('Please upload a JPEG, PNG, or WebP image.');
+      return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      showError('File too large — maximum size is 10 MB.');
+      return;
+    }
+    selectedFile = file;
+    hideError();
 
-    // ─── Results display ───────────────────────────────────────────────────────
-    const STATUS_CONFIG = {
-      'Unripe':                { badgeClass: 'badge-unripe',   barColor: '#64748B', emoji: '🌱' },
-      'Ripening':              { badgeClass: 'badge-ripening', barColor: '#F59E0B', emoji: '🍋' },
-      'Ripe':                  { badgeClass: 'badge-ripe',     barColor: '#10B981', emoji: '✅' },
-      'Fully Ripe / Overripe': { badgeClass: 'badge-overripe', barColor: '#F97316', emoji: '⚠️' },
+    const reader = new FileReader();
+    reader.onload = ev => {
+      previewImg.src = ev.target.result;
+      previewFilename.textContent = file.name;
+      dropIdle.classList.add('hidden');
+      dropPreview.classList.remove('hidden');
     };
+    reader.readAsDataURL(file);
+  }
 
-    function getInsight(status, ripeness, days) {
-      if (status === 'Unripe')
-        return `This fruit needs more time. Best to wait ${days > 0 ? `~${days} more days` : 'a bit longer'} before consuming.`;
-      if (status === 'Ripening')
-        return `Getting there! Ripening is underway — ${days > 0 ? `roughly ${days} days` : 'almost'} to peak.`;
-      if (status === 'Ripe')
-        return `Perfect timing. This fruit is at or near its ideal ripeness for eating.`;
-      if (status === 'Fully Ripe / Overripe')
-        return `Past peak ripeness. Best consumed immediately or used for smoothies/cooking.`;
-      return '';
-    }
+  // ─── Inference ───────────────────────────────────────────────────────────────
+  async function analyze() {
+    if (!selectedFile) return;
+    hideError();
 
-    function showResults(data) {
-      loadingSection.classList.add('hidden');
+    // Swap upload → loading in the same visual space
+    uploadSection.classList.add('hidden');
+    loadingSection.classList.add('visible');
 
-      const cfg = STATUS_CONFIG[data.status] || STATUS_CONFIG['Ripe'];
+    const form = new FormData();
+    form.append('file', selectedFile);
 
-      resultImg.src = previewImg.src;
-      resultFilename.textContent = data.filename;
-      ripenessValue.textContent = `${data.ripeness_pct}%`;
-      statusText.textContent = data.status;
-      daysValue.textContent = data.days_to_ripe === 0
-        ? 'At peak / past'
-        : `${data.days_to_ripe} days`;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/predict`, { method: 'POST', body: form });
 
-      // Badge
-      statusBadge.textContent = `${cfg.emoji} ${data.status}`;
-      statusBadge.className = `badge ${cfg.badgeClass}`;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429) throw new Error('Rate limit reached — please wait a minute and try again.');
+        if (res.status === 503) throw new Error('Model is warming up — please retry in a few seconds.');
+        throw new Error(body.detail || `Server error ${res.status}`);
+      }
 
-      // Insight
-      insightText.textContent = getInsight(data.status, data.ripeness_pct, data.days_to_ripe);
-
-      // Show section before animating bar (needs to be in DOM)
-      resultsSection.classList.remove('hidden');
-      resultsSection.classList.add('slide-up');
-
-      // Reset bar then animate after a frame
-      progressFill.style.width = '0%';
-      progressFill.style.backgroundColor = cfg.barColor;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          progressFill.style.width = `${data.ripeness_pct}%`;
-        });
-      });
-    }
-
-    // ─── Reset helpers ─────────────────────────────────────────────────────────
-    function resetUpload() {
-      selectedFile = null;
-      fileInput.value = '';
-      previewImg.src = '';
-      previewFilename.textContent = '';
-      previewContent.classList.add('hidden');
-      previewContent.style.display = 'none';
-      dropContent.classList.remove('hidden');
-      hideError();
-    }
-
-    function resetFull() {
-      resetUpload();
-      progressFill.style.width = '0%';
-      resultsSection.classList.add('hidden');
-      resultsSection.classList.remove('slide-up');
+      showResults(await res.json());
+    } catch (err) {
+      loadingSection.classList.remove('visible');
       uploadSection.classList.remove('hidden');
+      showError(err.message || 'Something went wrong. Please try again.');
     }
+  }
 
-    // ─── Error helpers ─────────────────────────────────────────────────────────
-    function showError(msg) {
-      errorMsg.textContent = `⚠ ${msg}`;
-      errorMsg.classList.remove('hidden');
-    }
-    function hideError() {
-      errorMsg.classList.add('hidden');
-    }
-  </script>
+  // ─── Results ─────────────────────────────────────────────────────────────────
+  const STATUS_CONFIG = {
+    'Unripe':                { cls: 'badge-unripe',   bar: '#64748B', emoji: '🌱', icon: '⏳' },
+    'Ripening':              { cls: 'badge-ripening', bar: '#F59E0B', emoji: '🍋', icon: '📈' },
+    'Ripe':                  { cls: 'badge-ripe',     bar: '#22C55E', emoji: '✅', icon: '💡' },
+    'Fully Ripe / Overripe': { cls: 'badge-overripe', bar: '#F97316', emoji: '⚠️', icon: '🔥' },
+  };
+
+  const INSIGHTS = {
+    'Unripe':                (d) => `Needs more time. Best to wait ${d > 0 ? `~${d} more days` : 'a bit longer'} before consuming.`,
+    'Ripening':              (d) => `Ripening is underway — ${d > 0 ? `roughly ${d} days` : 'almost there'} to reach peak.`,
+    'Ripe':                  ()  => `Perfect timing. This fruit is at or near its ideal ripeness for eating.`,
+    'Fully Ripe / Overripe': ()  => `Past peak ripeness. Best consumed immediately or blended into smoothies.`,
+  };
+
+  function showResults(data) {
+    loadingSection.classList.remove('visible');
+
+    const cfg = STATUS_CONFIG[data.status] || STATUS_CONFIG['Ripe'];
+
+    resultImg.src       = previewImg.src;
+    resultFilename.textContent = data.filename;
+    ripenessValue.textContent  = `${data.ripeness_pct}%`;
+    statusText.textContent     = data.status;
+    daysValue.textContent      = data.days_to_ripe === 0 ? 'At peak / past' : `${data.days_to_ripe} days`;
+
+    statusBadge.textContent = `${cfg.emoji}  ${data.status}`;
+    statusBadge.className   = `badge ${cfg.cls}`;
+
+    insightIcon.textContent = cfg.icon;
+    insightText.textContent = (INSIGHTS[data.status] || INSIGHTS['Ripe'])(data.days_to_ripe);
+
+    // Force animation replay by removing and re-adding .visible in separate frames
+    resultsSection.classList.remove('visible');
+    resultsSection.offsetHeight; // force reflow
+    resultsSection.classList.add('visible');
+
+    // Animate bar: reset → wait one frame → set target width
+    progressFill.style.transition = 'none';
+    progressFill.style.width = '0%';
+    progressFill.style.backgroundColor = cfg.bar;
+    requestAnimationFrame(() => {
+      progressFill.style.transition = 'width 1.1s cubic-bezier(0.4,0,0.2,1), background-color 0.3s ease';
+      requestAnimationFrame(() => {
+        progressFill.style.width = `${data.ripeness_pct}%`;
+      });
+    });
+  }
+
+  // ─── Reset ───────────────────────────────────────────────────────────────────
+  function resetUpload() {
+    selectedFile = null;
+    fileInput.value = '';
+    previewImg.src = '';
+    previewFilename.textContent = '';
+    dropPreview.classList.add('hidden');
+    dropIdle.classList.remove('hidden');
+    hideError();
+  }
+
+  function resetFull() {
+    resetUpload();
+    progressFill.style.transition = 'none';
+    progressFill.style.width = '0%';
+    resultsSection.classList.remove('visible');
+    uploadSection.classList.remove('hidden');
+  }
+
+  // ─── Error ───────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    errorMsg.textContent = `⚠  ${msg}`;
+    errorMsg.classList.add('visible');
+  }
+  function hideError() {
+    errorMsg.classList.remove('visible');
+  }
+</script>
 
 </body>
 </html>
