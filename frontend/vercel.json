@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL/api/:path*"
+      "destination": "https://ai-based-fruit-ripeness-detection.onrender.com/api/:path*"
     }
   ],
   "headers": [
