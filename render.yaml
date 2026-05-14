@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: fruit-ripeness-api
+    runtime: docker
+    # standard plan: 2 GB RAM — required for tensorflow-cpu at inference time.
+    # starter (512 MB) will OOM. Downgrade to starter only after TFLite conversion.
+    plan: standard
+    healthCheckPath: /health
+    envVars:
+      - key: MODEL_PATH
+        value: fruit_freshness_regression.keras
+      - key: SCALER_PATH
+        value: target_scaler.save
+      - key: LOG_LEVEL
+        value: INFO
+      - key: MAX_FILE_SIZE_MB
+        value: "10"
+      # Set API_KEY to a strong random string to require auth on all requests.
+      # Leave empty for public access (rate limiting still applies).
+      - key: API_KEY
+        sync: false
+      # Set to your Vercel frontend URL after deployment.
+      # Example: https://your-app.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false

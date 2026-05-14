@@ -1,0 +1,41 @@
+# Exclude everything that is not needed at runtime.
+# Model files (*.keras, *.save) are intentionally NOT excluded — they are baked in.
+
+.git
+.venv
+.claude
+
+dataset/
+
+# Training + utility scripts (not used at runtime)
+train_model.py
+generate_dataset.py
+create_demo_gif.py
+predict_fruit.py
+
+# Data files
+*.csv
+*.xlsx
+fruit_labels.csv
+fruit_labels.csv.xlsx
+tmp_readme.json
+
+# Media
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Docs and config not needed in image
+README.md
+.env
+.env.example
+.gitignore
+render.yaml
+requirements.txt
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

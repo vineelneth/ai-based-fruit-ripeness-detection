@@ -22,8 +22,8 @@ ENV/
 # Dataset (download separately — see README)
 dataset/
 
-# Trained models (large binaries)
-*.keras
+# Trained models — *.h5 and SavedModel dirs are large/legacy, keep out of git.
+# *.keras IS committed (25 MB, under GitHub's 100 MB limit) so Render Docker build works.
 *.h5
 *.pb
 saved_model/
@@ -36,3 +36,17 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Claude Code internal settings
+.claude/
+
+# Data files (generated — not needed in repo)
+*.csv
+*.xlsx
+tmp_readme.json
+
+# Test artifacts
+test_fruit.jpg
+
+# Runtime logs
+logs/

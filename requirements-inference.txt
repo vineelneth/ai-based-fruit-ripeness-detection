@@ -1,0 +1,23 @@
+# Inference-only dependencies — do NOT add training libs here (pandas, matplotlib, etc.)
+# All versions pinned to exactly match the training environment to avoid
+# Keras/sklearn serialization compatibility issues.
+#
+# Training env: Python 3.12.3, tensorflow==2.21.0, keras==3.14.1
+# Model saved with Keras 3 format (.keras ZIP with config.json + model.weights.h5)
+# tensorflow-cpu does not exist for 2.21.0 — use full tensorflow package.
+# CPU inference is automatic when no GPU is present in the container.
+
+tensorflow==2.21.0
+numpy==1.26.4
+pillow==12.2.0
+scikit-learn==1.8.0
+joblib==1.5.3
+
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12
+pydantic-settings==2.4.0
+
+# Rate limiting
+slowapi==0.1.9

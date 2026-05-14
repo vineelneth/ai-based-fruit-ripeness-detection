@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FreshScan — AI Fruit Ripeness Detector</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --green-deep:   #1B4332;
+      --green-mid:    #2D6A4F;
+      --green-light:  #52B788;
+      --green-pale:   #D8F3DC;
+      --amber:        #F59E0B;
+      --orange:       #F97316;
+      --slate:        #64748B;
+      --bg:           #F4FAF6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Drop zone ─────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed #A7C8B4;
+      border-radius: 1rem;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      user-select: none;
+    }
+    .drop-zone:hover { border-color: var(--green-mid); background: #F0FAF4; }
+    .drop-zone.drag-over {
+      border-color: var(--green-light);
+      background: var(--green-pale);
+      transform: scale(1.01);
+    }
+
+    /* ── Progress bar ───────────────────────────────────── */
+    .progress-track {
+      background: #E5E7EB;
+      border-radius: 9999px;
+      height: 12px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+                  background-color 0.4s ease;
+    }
+
+    /* ── Status badges ──────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge-unripe      { background:#E2E8F0; color:#334155; }
+    .badge-ripening    { background:#FEF3C7; color:#92400E; }
+    .badge-ripe        { background:#D1FAE5; color:#065F46; }
+    .badge-overripe    { background:#FFEDD5; color:#9A3412; }
+
+    /* ── Spinner ────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid #D1FAE5;
+      border-top-color: var(--green-mid);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── Slide-up reveal ────────────────────────────────── */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-up { animation: slideUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+    /* ── Error banner ───────────────────────────────────── */
+    .error-banner {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: 0.5rem;
+      color: #991B1B;
+      padding: 10px 16px;
+      font-size: 0.875rem;
+    }
+
+    /* ── Result image ───────────────────────────────────── */
+    .result-img {
+      width: 100%;
+      max-height: 240px;
+      object-fit: cover;
+      border-radius: 0.75rem;
+    }
+
+    /* ── Button styles ──────────────────────────────────── */
+    .btn-primary {
+      background: var(--green-mid);
+      color: #fff;
+      border: none;
+      border-radius: 0.625rem;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      width: 100%;
+    }
+    .btn-primary:hover  { background: var(--green-deep); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--green-mid);
+      border: 2px solid var(--green-mid);
+      border-radius: 0.625rem;
+      padding: 10px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: var(--green-pale); }
+
+    /* ── Stat cards ─────────────────────────────────────── */
+    .stat-card {
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 0.75rem;
+      padding: 14px 16px;
+    }
+
+    /* ── Responsive preview image in upload zone ────────── */
+    #preview-img {
+      max-height: 200px;
+      max-width: 100%;
+      border-radius: 0.75rem;
+      object-fit: contain;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Header ───────────────────────────────────────────── -->
+  <header style="background:#fff; border-bottom:1px solid #E5E7EB;">
+    <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span style="font-size:1.5rem;">🍎</span>
+        <span style="font-weight:800; font-size:1.2rem; color:var(--green-deep); letter-spacing:-0.02em;">FreshScan</span>
+        <span style="font-size:0.7rem; background:var(--green-pale); color:var(--green-mid); padding:2px 8px; border-radius:9999px; font-weight:600; margin-left:4px;">BETA</span>
+      </div>
+      <a
+        href="https://github.com/vineelneth/ai-based-fruit-ripeness-detection"
+        target="_blank"
+        rel="noopener"
+        style="font-size:0.85rem; color:var(--slate); text-decoration:none; display:flex; align-items:center; gap:5px;"
+        onmouseover="this.style.color='var(--green-mid)'"
+        onmouseout="this.style.color='var(--slate)'"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
+
+    <!-- Hero text -->
+    <div class="text-center mb-8">
+      <h1 style="font-size:2rem; font-weight:800; color:var(--green-deep); letter-spacing:-0.03em; line-height:1.2;" class="mb-2">
+        AI Fruit Ripeness Detector
+      </h1>
+      <p style="color:#6B7280; font-size:1rem;">
+        Upload any fruit photo for an instant ripeness score, status, and estimated days to peak.
+      </p>
+    </div>
+
+    <!-- ── Upload section ─────────────────────────────────── -->
+    <div id="upload-section">
+      <div
+        id="drop-zone"
+        class="drop-zone"
+        style="padding:2.5rem 1.5rem; text-align:center; min-height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem;"
+      >
+        <!-- Default drop content -->
+        <div id="drop-content">
+          <div style="font-size:3rem; line-height:1; margin-bottom:0.5rem;">📸</div>
+          <p style="font-weight:600; font-size:1.05rem; color:#374151; margin:0 0 4px;">
+            Drop your fruit image here
+          </p>
+          <p style="color:#9CA3AF; font-size:0.875rem; margin:0 0 16px;">
+            or click anywhere to browse
+          </p>
+          <p style="color:#D1D5DB; font-size:0.75rem; margin:0;">
+            JPEG · PNG · WebP &nbsp;·&nbsp; Max 10 MB
+          </p>
+        </div>
+
+        <!-- Preview content (hidden until file chosen) -->
+        <div id="preview-content" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:1rem;">
+          <img id="preview-img" src="" alt="Preview" />
+          <p id="preview-filename" style="font-size:0.8rem; color:#9CA3AF; margin:0;"></p>
+          <div style="display:flex; gap:10px; width:100%; max-width:320px;">
+            <button id="change-btn" class="btn-secondary" style="flex:1; padding:8px 12px; font-size:0.85rem;"
+              onclick="event.stopPropagation(); resetUpload();">
+              Change
+            </button>
+            <button id="analyze-btn" class="btn-primary" style="flex:2;"
+              onclick="event.stopPropagation(); analyze();">
+              Analyze Ripeness
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden file input -->
+      <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" />
+
+      <!-- Error message -->
+      <div id="error-msg" class="error-banner hidden mt-3"></div>
+    </div>
+
+    <!-- ── Loading section ────────────────────────────────── -->
+    <div id="loading-section" class="hidden" style="text-align:center; padding:4rem 0;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1.25rem;">
+        <div class="spinner"></div>
+        <div>
+          <p style="font-weight:600; color:#374151; margin:0 0 4px;">Analyzing your fruit…</p>
+          <p style="font-size:0.85rem; color:#9CA3AF; margin:0;">Running MobileNetV2 inference</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Results section ────────────────────────────────── -->
+    <div id="results-section" class="hidden slide-up">
+
+      <!-- Result card -->
+      <div style="background:#fff; border-radius:1rem; border:1px solid #E5E7EB; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+
+        <!-- Image -->
+        <div style="background:#F9FAFB; border-bottom:1px solid #F3F4F6;">
+          <img id="result-img" src="" alt="Analyzed fruit" class="result-img" />
+        </div>
+
+        <!-- Result body -->
+        <div style="padding:1.5rem;">
+
+          <!-- Filename + badge -->
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:8px;">
+            <p id="result-filename" style="font-size:0.8rem; color:#9CA3AF; margin:0; font-weight:500;"></p>
+            <span id="status-badge" class="badge badge-ripe">Ripe</span>
+          </div>
+
+          <!-- Ripeness score -->
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+              <span style="font-size:0.85rem; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">Ripeness Score</span>
+              <span id="ripeness-value" style="font-size:2rem; font-weight:800; color:var(--green-deep); letter-spacing:-0.03em;">—</span>
+            </div>
+            <div class="progress-track">
+              <div id="progress-fill" class="progress-fill" style="background:var(--green-light);"></div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.5rem;">
+            <div class="stat-card">
+              <p style="font-size:0.75rem; color:#9CA3AF; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Days to Peak</p>
+              <p id="days-value" style="font-size:1.3rem; font-weight:700; color:#1a1a1a; margin:0;">—</p>
+            </div>
+            <div class="stat-card">
+              <p style="font-size:0.75rem; color:#9CA3AF; margin:0 0 4px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Status</p>
+              <p id="status-text" style="font-size:1.05rem; font-weight:700; color:#1a1a1a; margin:0;">—</p>
+            </div>
+          </div>
+
+          <!-- Insight line -->
+          <p id="insight-text" style="font-size:0.875rem; color:#6B7280; background:#F9FAFB; border-radius:0.5rem; padding:10px 14px; margin-bottom:1.25rem;"></p>
+
+          <!-- Reset button -->
+          <button id="reset-btn" class="btn-secondary" style="width:100%;" onclick="resetFull();">
+            ← Analyze Another Fruit
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ───────────────────────────────────────────── -->
+  <footer style="border-top:1px solid #E5E7EB; background:#fff; padding:1rem; text-align:center;">
+    <p style="font-size:0.78rem; color:#9CA3AF; margin:0;">
+      Powered by MobileNetV2 transfer learning &nbsp;·&nbsp;
+      <a href="https://github.com/vineelneth/ai-based-fruit-ripeness-detection"
+         target="_blank" rel="noopener"
+         style="color:var(--green-mid); text-decoration:none;">Open source</a>
+    </p>
+  </footer>
+
+  <script>
+    // ─── Config ────────────────────────────────────────────────────────────────
+    // For local development: set this to 'http://localhost:8000'
+    // For production on Vercel: leave as '' (vercel.json rewrite handles routing)
+    const API_BASE = '';
+
+    // ─── DOM refs ──────────────────────────────────────────────────────────────
+    const dropZone       = document.getElementById('drop-zone');
+    const dropContent    = document.getElementById('drop-content');
+    const previewContent = document.getElementById('preview-content');
+    const previewImg     = document.getElementById('preview-img');
+    const previewFilename= document.getElementById('preview-filename');
+    const fileInput      = document.getElementById('file-input');
+    const errorMsg       = document.getElementById('error-msg');
+    const uploadSection  = document.getElementById('upload-section');
+    const loadingSection = document.getElementById('loading-section');
+    const resultsSection = document.getElementById('results-section');
+    const resultImg      = document.getElementById('result-img');
+    const ripenessValue  = document.getElementById('ripeness-value');
+    const progressFill   = document.getElementById('progress-fill');
+    const statusBadge    = document.getElementById('status-badge');
+    const statusText     = document.getElementById('status-text');
+    const daysValue      = document.getElementById('days-value');
+    const insightText    = document.getElementById('insight-text');
+    const resultFilename = document.getElementById('result-filename');
+
+    let selectedFile = null;
+
+    // ─── Drag & drop wiring ────────────────────────────────────────────────────
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileSelect(file);
+    });
+
+    dropZone.addEventListener('click', () => {
+      if (!previewContent.classList.contains('hidden')) return; // buttons handle their own clicks
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleFileSelect(e.target.files[0]);
+    });
+
+    // ─── File selection ────────────────────────────────────────────────────────
+    const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
+
+    function handleFileSelect(file) {
+      if (!ACCEPTED_TYPES.has(file.type)) {
+        showError('Unsupported file type. Please upload a JPEG, PNG, or WebP image.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showError('File is too large (max 10 MB). Please choose a smaller image.');
+        return;
+      }
+      selectedFile = file;
+      hideError();
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        previewImg.src = e.target.result;
+        previewFilename.textContent = file.name;
+        dropContent.classList.add('hidden');
+        previewContent.classList.remove('hidden');
+        previewContent.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ─── Inference call ────────────────────────────────────────────────────────
+    async function analyze() {
+      if (!selectedFile) return;
+      hideError();
+      uploadSection.classList.add('hidden');
+      loadingSection.classList.remove('hidden');
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/predict`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = body.detail || `Server returned ${res.status}`;
+          if (res.status === 429) throw new Error('Rate limit reached. Please wait a minute and try again.');
+          if (res.status === 503) throw new Error('Model is still warming up — please try again in a few seconds.');
+          throw new Error(msg);
+        }
+
+        const data = await res.json();
+        showResults(data);
+      } catch (err) {
+        loadingSection.classList.add('hidden');
+        uploadSection.classList.remove('hidden');
+        showError(err.message || 'Something went wrong. Please try again.');
+      }
+    }
+
+    // ─── Results display ───────────────────────────────────────────────────────
+    const STATUS_CONFIG = {
+      'Unripe':                { badgeClass: 'badge-unripe',   barColor: '#64748B', emoji: '🌱' },
+      'Ripening':              { badgeClass: 'badge-ripening', barColor: '#F59E0B', emoji: '🍋' },
+      'Ripe':                  { badgeClass: 'badge-ripe',     barColor: '#10B981', emoji: '✅' },
+      'Fully Ripe / Overripe': { badgeClass: 'badge-overripe', barColor: '#F97316', emoji: '⚠️' },
+    };
+
+    function getInsight(status, ripeness, days) {
+      if (status === 'Unripe')
+        return `This fruit needs more time. Best to wait ${days > 0 ? `~${days} more days` : 'a bit longer'} before consuming.`;
+      if (status === 'Ripening')
+        return `Getting there! Ripening is underway — ${days > 0 ? `roughly ${days} days` : 'almost'} to peak.`;
+      if (status === 'Ripe')
+        return `Perfect timing. This fruit is at or near its ideal ripeness for eating.`;
+      if (status === 'Fully Ripe / Overripe')
+        return `Past peak ripeness. Best consumed immediately or used for smoothies/cooking.`;
+      return '';
+    }
+
+    function showResults(data) {
+      loadingSection.classList.add('hidden');
+
+      const cfg = STATUS_CONFIG[data.status] || STATUS_CONFIG['Ripe'];
+
+      resultImg.src = previewImg.src;
+      resultFilename.textContent = data.filename;
+      ripenessValue.textContent = `${data.ripeness_pct}%`;
+      statusText.textContent = data.status;
+      daysValue.textContent = data.days_to_ripe === 0
+        ? 'At peak / past'
+        : `${data.days_to_ripe} days`;
+
+      // Badge
+      statusBadge.textContent = `${cfg.emoji} ${data.status}`;
+      statusBadge.className = `badge ${cfg.badgeClass}`;
+
+      // Insight
+      insightText.textContent = getInsight(data.status, data.ripeness_pct, data.days_to_ripe);
+
+      // Show section before animating bar (needs to be in DOM)
+      resultsSection.classList.remove('hidden');
+      resultsSection.classList.add('slide-up');
+
+      // Reset bar then animate after a frame
+      progressFill.style.width = '0%';
+      progressFill.style.backgroundColor = cfg.barColor;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          progressFill.style.width = `${data.ripeness_pct}%`;
+        });
+      });
+    }
+
+    // ─── Reset helpers ─────────────────────────────────────────────────────────
+    function resetUpload() {
+      selectedFile = null;
+      fileInput.value = '';
+      previewImg.src = '';
+      previewFilename.textContent = '';
+      previewContent.classList.add('hidden');
+      previewContent.style.display = 'none';
+      dropContent.classList.remove('hidden');
+      hideError();
+    }
+
+    function resetFull() {
+      resetUpload();
+      progressFill.style.width = '0%';
+      resultsSection.classList.add('hidden');
+      resultsSection.classList.remove('slide-up');
+      uploadSection.classList.remove('hidden');
+    }
+
+    // ─── Error helpers ─────────────────────────────────────────────────────────
+    function showError(msg) {
+      errorMsg.textContent = `⚠ ${msg}`;
+      errorMsg.classList.remove('hidden');
+    }
+    function hideError() {
+      errorMsg.classList.add('hidden');
+    }
+  </script>
+
+</body>
+</html>
