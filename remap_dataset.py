@@ -62,6 +62,7 @@ RIPENESS_RULES = [
     ("spoiled",     (93, 100), (0.0, 0.0)),
     ("bad",         (90, 100), (0.0, 0.5)),
     ("damaged",     (85, 100), (0.0, 1.0)),
+    ("not rip",     (5,  35),  (6.0, 12.0)),  # "not ripe" / "not ripened" — must precede "ripe"
     ("ripening",    (40, 65),  (2.0, 5.0)),
     ("unripe",      (5,  35),  (6.0, 12.0)),
     ("raw",         (5,  35),  (6.0, 12.0)),
@@ -77,26 +78,66 @@ RIPENESS_RULES = [
 # Maps any alias (or substring) to a canonical fruit name.
 # Add new fruits here before running the script on a new dataset.
 FRUIT_ALIASES: dict[str, list[str]] = {
+    # ── Core fruits ────────────────────────────────────────────────────────
     "apple":        ["apple", "apples"],
+    "apricot":      ["apricot", "apricots"],
+    "avocado":      ["avocado", "avocados"],
     "banana":       ["banana", "bananas"],
-    "orange":       ["orange", "oranges"],
-    "mango":        ["mango", "mangoes", "mangos"],
+    "blueberry":    ["blueberry", "blueberries"],
+    "cantaloupe":   ["cantaloupe", "cantaloupes"],
+    "carambola":    ["carambula", "carambola", "starfruit"],
+    "cherry":       ["cherry", "cherries"],
+    "clementine":   ["clementine", "clementines"],
+    "coconut":      ["cocos", "coconut", "coconuts"],
+    "date":         ["dates", "date"],
+    "fig":          ["fig", "figs"],
     "grape":        ["grape", "grapes"],
-    "strawberry":   ["strawberry", "strawberries"],
+    "grapefruit":   ["grapefruit", "grapefruits"],
+    "guava":        ["guava", "guavas"],
+    "huckleberry":  ["huckleberry", "huckleberries"],
+    "kaki":         ["kaki", "persimmon", "persimmons"],
+    "kiwi":         ["kiwi", "kiwis", "kiwifruit"],
+    "kumquat":      ["kumquats", "kumquat"],
     "lemon":        ["lemon", "lemons"],
     "lime":         ["lime", "limes"],
-    "kiwi":         ["kiwi", "kiwis", "kiwifruit"],
-    "pear":         ["pear", "pears"],
+    "lychee":       ["lychee", "lychees"],
+    "mandarin":     ["mandarine", "mandarin", "mandarins", "tangelo", "tangelos"],
+    "mango":        ["mango", "mangoes", "mangos"],
+    "mangosteen":   ["mangostan", "mangosteen", "mangosteens"],
+    "melon":        ["melon", "melons"],
+    "mulberry":     ["mulberry", "mulberries"],
+    "nectarine":    ["nectarine", "nectarines"],
+    "orange":       ["orange", "oranges"],
+    "papaya":       ["papaya", "papayas", "pawpaw"],
+    "passion_fruit":["maracuja", "passion fruit", "granadilla", "passionfruit"],
     "peach":        ["peach", "peaches"],
+    "pear":         ["pear", "pears"],
+    "physalis":     ["physalis"],
+    "pineapple":    ["pineapple", "pineapples"],
+    "pitahaya":     ["pitahaya", "dragonfruit", "dragon fruit"],
     "plum":         ["plum", "plums"],
     "pomegranate":  ["pomegranate", "pomegranates"],
-    "pineapple":    ["pineapple", "pineapples"],
-    "watermelon":   ["watermelon", "watermelons"],
-    "guava":        ["guava", "guavas"],
-    "papaya":       ["papaya", "papayas", "pawpaw"],
+    "pomelo":       ["pomelo", "pomelos", "sweetie"],
+    "quince":       ["quince", "quinces"],
+    "rambutan":     ["rambutan", "rambutans"],
+    "raspberry":    ["raspberry", "raspberries"],
+    "redcurrant":   ["redcurrant", "redcurrants"],
+    "salak":        ["salak"],
+    "strawberry":   ["strawberry", "strawberries"],
+    "tamarillo":    ["tamarillo", "tamarillos"],
     "tomato":       ["tomato", "tomatoes"],
-    "cherry":       ["cherry", "cherries"],
-    "fig":          ["fig", "figs"],
+    "watermelon":   ["watermelon", "watermelons"],
+    # ── Fruit-vegetables (have meaningful ripeness stages) ─────────────────
+    "cucumber":     ["cucumber", "cucumbers"],
+    "pepper":       ["pepper", "peppers"],
+    "zucchini":     ["zucchini", "zucchinis", "courgette"],
+    "eggplant":     ["eggplant", "eggplants", "aubergine"],
+    "pepino":       ["pepino"],
+    # ── Nuts (skip by omission — no ripeness concept) ──────────────────────
+    # Hazelnut, Walnut, Chestnut, Nut Pecan, Nut Forest → not listed → SKIP
+    # ── Root vegetables / staples (skip) ───────────────────────────────────
+    # Beetroot, Cabbage, Carrot, Cauliflower, Corn, Ginger Root,
+    # Kohlrabi, Onion, Potato → not listed → SKIP
 }
 
 # Build reverse lookup: alias → canonical name
@@ -112,14 +153,24 @@ SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 
 def normalize_fruit(name: str) -> str | None:
     """Return the canonical fruit name for a folder name, or None if unknown."""
-    name_lower = name.lower()
-    # Exact match first
+    name_lower = name.lower().strip()
+
+    # 1. Exact match
     if name_lower in _ALIAS_LOOKUP:
         return _ALIAS_LOOKUP[name_lower]
-    # Substring match — handles 'freshapples', 'Apple Braeburn', 'rottenoranges', etc.
-    for alias, canonical in _ALIAS_LOOKUP.items():
+
+    # 2. First-word match — handles "Watermelon 1" (not "melon"),
+    #    "Tomato Cherry Red 1" (not "cherry"), "Mangostan 1" (not "mango")
+    first_word = name_lower.split()[0] if name_lower else ""
+    if first_word in _ALIAS_LOOKUP:
+        return _ALIAS_LOOKUP[first_word]
+
+    # 3. Longest-alias substring match — handles "freshapples", "rottenbanana"
+    #    Longest-first prevents "melon" stealing from "watermelon" in flat names
+    for alias in sorted(_ALIAS_LOOKUP.keys(), key=len, reverse=True):
         if alias in name_lower:
-            return canonical
+            return _ALIAS_LOOKUP[alias]
+
     return None
 
 
