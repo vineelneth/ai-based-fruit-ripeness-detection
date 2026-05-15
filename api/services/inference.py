@@ -59,6 +59,7 @@ class InferenceService:
 
         if ripeness_pct >= 95:
             status = "Fully Ripe / Overripe"
+            days_to_ripe = 0.0  # already past peak — model outputs are independent, enforce consistency
         elif ripeness_pct >= 70:
             status = "Ripe"
         elif ripeness_pct >= 40:
