@@ -471,6 +471,49 @@
     .site-footer a { color: var(--green-mid); text-decoration: none; }
     .site-footer a:hover { text-decoration: underline; }
 
+    /* ── Fruit detection row ────────────────────────────────── */
+    .fruit-id-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green-faint);
+      border: 1px solid var(--green-pale);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      margin-bottom: 1.5rem;
+    }
+    .fruit-id-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .fruit-id-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .fruit-id-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--green-mid);
+    }
+    .fruit-id-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fruit-conf-pill {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: var(--green-pale);
+      color: var(--green-deep);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .fruit-conf-pill.low-conf {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
     /* ── Utility ────────────────────────────────────────────── */
     .hidden { display: none !important; }
 
@@ -606,6 +649,16 @@
               <span id="status-badge" class="badge badge-ripe">Ripe</span>
             </div>
 
+            <!-- Detected fruit -->
+            <div class="fruit-id-row">
+              <span class="fruit-id-icon">🔍</span>
+              <div class="fruit-id-info">
+                <span class="fruit-id-label">Detected Fruit</span>
+                <span id="fruit-name-text" class="fruit-id-name">—</span>
+              </div>
+              <span id="fruit-conf-pill" class="fruit-conf-pill">—</span>
+            </div>
+
             <!-- Ripeness score + bar -->
             <div class="score-block">
               <div class="score-row">
@@ -685,6 +738,8 @@
   const insightText    = document.getElementById('insight-text');
   const insightIcon    = document.getElementById('insight-icon');
   const resultFilename = document.getElementById('result-filename');
+  const fruitNameText  = document.getElementById('fruit-name-text');
+  const fruitConfPill  = document.getElementById('fruit-conf-pill');
 
   let selectedFile = null;
 
@@ -793,6 +848,11 @@
 
     resultImg.src       = previewImg.src;
     resultFilename.textContent = data.filename;
+
+    fruitNameText.textContent = data.fruit_name || 'Unknown';
+    const conf = data.fruit_confidence ?? 0;
+    fruitConfPill.textContent = `${conf}% confidence`;
+    fruitConfPill.className = 'fruit-conf-pill' + (conf < 30 ? ' low-conf' : '');
     ripenessValue.textContent  = `${data.ripeness_pct}%`;
     statusText.textContent     = data.status;
     daysValue.textContent      = data.days_to_ripe === 0 ? 'At peak / past' : `${data.days_to_ripe} days`;
@@ -835,6 +895,9 @@
     resetUpload();
     progressFill.style.transition = 'none';
     progressFill.style.width = '0%';
+    fruitNameText.textContent = '—';
+    fruitConfPill.textContent = '—';
+    fruitConfPill.className = 'fruit-conf-pill';
     resultsSection.classList.remove('visible');
     uploadSection.classList.remove('hidden');
   }

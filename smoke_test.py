@@ -82,6 +82,8 @@ def test_backend(base: str):
             )
             data = r.json()
             passed.append(check("Predict status 200", r.status_code == 200, str(r.status_code)))
+            passed.append(check("fruit_name in response", "fruit_name" in data, str(data.get("fruit_name"))))
+            passed.append(check("fruit_confidence in 0-100", 0 <= data.get("fruit_confidence", -1) <= 100))
             passed.append(check("ripeness_pct in response", "ripeness_pct" in data))
             passed.append(check("ripeness_pct in 0-100", 0 <= data.get("ripeness_pct", -1) <= 100))
             passed.append(check("days_to_ripe >= 0", data.get("days_to_ripe", -1) >= 0))
@@ -167,7 +169,7 @@ def test_frontend(base: str, backend: str):
             passed.append(check("Vercel->Render rewrite works (200)", r.status_code == 200, str(r.status_code)))
             if r.status_code == 200:
                 data = r.json()
-                passed.append(check("Full end-to-end prediction", "ripeness_pct" in data, str(data)))
+                passed.append(check("Full end-to-end prediction", "ripeness_pct" in data and "fruit_name" in data, str(data)))
         except Exception as e:
             passed.append(check("Vercel rewrite test", False, str(e)))
     else:

@@ -54,12 +54,12 @@ class FruitGateService:
     def is_loaded(self) -> bool:
         return self._model is not None
 
-    def check(self, image_bytes: bytes) -> tuple[bool, str]:
+    def check(self, image_bytes: bytes) -> tuple[bool, str, float]:
         """
-        Returns (True, detected_label) if the image has sufficient fruit probability.
-        Returns (False, top_predicted_label) otherwise.
+        Returns (True, detected_label, confidence_pct) if the image has sufficient fruit probability.
+        Returns (False, top_predicted_label, 0.0) otherwise.
 
-        Sums softmax probability across all fruit synsets in the top-10 predictions.
+        confidence_pct is the summed softmax probability across all fruit synsets (0–100).
         Summing rather than checking top-1 handles fruits absent from ImageNet-1K whose
         visual features distribute across nearby in-vocabulary fruit classes.
         """
@@ -80,10 +80,11 @@ class FruitGateService:
         best_fruit = next((lbl for s, lbl, _ in top10 if s in _FRUIT_SYNSETS), None)
 
         if fruit_prob >= _MIN_FRUIT_PROB:
-            return True, (best_fruit or "fruit").replace("_", " ")
+            label = (best_fruit or "fruit").replace("_", " ")
+            return True, label, round(fruit_prob * 100, 1)
 
         top_label = top10[0][1].replace("_", " ") if top10 else "unknown"
-        return False, top_label
+        return False, top_label, 0.0
 
 
 gate_service = FruitGateService()

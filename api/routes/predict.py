@@ -56,7 +56,7 @@ async def predict(
 
     # Gate: verify the image contains a fruit before running regression
     try:
-        is_fruit, label = await loop.run_in_executor(
+        is_fruit, label, confidence = await loop.run_in_executor(
             _executor, gate_service.check, image_bytes
         )
     except RuntimeError as exc:
@@ -87,4 +87,9 @@ async def predict(
         logger.exception("Unhandled inference error for file '%s'", file.filename)
         raise HTTPException(status_code=500, detail="Inference failed. Please try again.")
 
-    return PredictResponse(filename=file.filename or "unknown", **result)
+    return PredictResponse(
+        filename=file.filename or "unknown",
+        fruit_name=label.title(),
+        fruit_confidence=confidence,
+        **result,
+    )
