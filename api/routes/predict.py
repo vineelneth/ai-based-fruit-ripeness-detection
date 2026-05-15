@@ -8,6 +8,7 @@ from api.core.config import ALLOWED_CONTENT_TYPES, settings
 from api.core.limiter import limiter
 from api.dependencies import require_api_key
 from api.schemas.predict import PredictResponse
+from api.services.gate import gate_service
 from api.services.inference import inference_service
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ _executor = ThreadPoolExecutor(max_workers=1)
         401: {"description": "Invalid or missing API key"},
         413: {"description": "File exceeds size limit"},
         415: {"description": "Unsupported media type"},
-        422: {"description": "Image could not be processed"},
+        422: {"description": "Image is not a recognized fruit, or cannot be decoded"},
         429: {"description": "Rate limit exceeded"},
         503: {"description": "Model not ready"},
     },
@@ -51,8 +52,32 @@ async def predict(
             detail=f"File too large ({len(image_bytes) / 1_048_576:.1f} MB). Limit: {settings.max_file_size_mb} MB",
         )
 
+    loop = asyncio.get_running_loop()
+
+    # Gate: verify the image contains a fruit before running regression
     try:
-        loop = asyncio.get_running_loop()
+        is_fruit, label = await loop.run_in_executor(
+            _executor, gate_service.check, image_bytes
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception:
+        logger.exception("Gate check failed for '%s'", file.filename)
+        raise HTTPException(status_code=500, detail="Image validation failed. Please try again.")
+
+    if not is_fruit:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "UNSUPPORTED_IMAGE",
+                "message": (
+                    f"This looks like '{label}', not a fruit. "
+                    "Please upload a clear photo of a fruit."
+                ),
+            },
+        )
+
+    try:
         result = await loop.run_in_executor(_executor, inference_service.predict, image_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

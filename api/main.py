@@ -12,6 +12,7 @@ from api.core.limiter import limiter
 from api.core.logging_config import setup_logging
 from api.routes.predict import router as predict_router
 from api.schemas.predict import HealthResponse
+from api.services.gate import gate_service
 from api.services.inference import inference_service
 
 setup_logging()
@@ -20,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Startup: loading ML model (this may take ~10s)...")
+    logger.info("Startup: loading ML models (this may take ~20s)...")
     inference_service.load()
+    gate_service.load()
     logger.info("Startup complete — API ready")
     yield
     logger.info("Shutdown")
@@ -57,7 +59,8 @@ def root():
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 def health():
+    ready = inference_service.is_loaded and gate_service.is_loaded
     return HealthResponse(
-        status="ok" if inference_service.is_loaded else "degraded",
-        model_loaded=inference_service.is_loaded,
+        status="ok" if ready else "degraded",
+        model_loaded=ready,
     )
