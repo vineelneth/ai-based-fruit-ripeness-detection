@@ -6,10 +6,6 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-# WordNet synset IDs for fruits and produce in ImageNet-1K.
-# Synset IDs are stable ontological identifiers from the WordNet taxonomy —
-# not arbitrary string patterns. These are the only fruit/vegetable entries
-# in the 1000-class ImageNet benchmark.
 _FRUIT_SYNSETS = frozenset({
     "n07742313",  # Granny_Smith (apple)
     "n07745940",  # strawberry
@@ -21,7 +17,7 @@ _FRUIT_SYNSETS = frozenset({
     "n07754684",  # jackfruit
     "n07760859",  # custard_apple
     "n07768694",  # pomegranate
-    "n07716906",  # zucchini / courgette
+    "n07716906",  # zucchini
     "n07717410",  # acorn_squash
     "n07717556",  # butternut_squash
     "n07718472",  # cucumber
@@ -31,10 +27,28 @@ _FRUIT_SYNSETS = frozenset({
     "n07715103",  # cauliflower
 })
 
-# Minimum summed softmax probability across fruit synsets in top-10 to accept.
-# Set at 0.05 so out-of-ImageNet fruits (mango, papaya, kiwi, peach) accumulate
-# enough mass from visually similar in-vocabulary classes to pass, while
-# non-fruit images (vehicles, food dishes, indoor objects) consistently score < 0.01.
+# User-friendly display names for each synset (overrides raw ImageNet label).
+_SYNSET_LABELS = {
+    "n07742313": "Apple",
+    "n07745940": "Strawberry",
+    "n07747607": "Orange",
+    "n07749582": "Lemon",
+    "n07753113": "Fig",
+    "n07753275": "Pineapple",
+    "n07753592": "Banana",
+    "n07754684": "Jackfruit",
+    "n07760859": "Custard Apple",
+    "n07768694": "Pomegranate",
+    "n07716906": "Zucchini",
+    "n07717410": "Acorn Squash",
+    "n07717556": "Butternut Squash",
+    "n07718472": "Cucumber",
+    "n07718747": "Artichoke",
+    "n07720875": "Bell Pepper",
+    "n07714990": "Broccoli",
+    "n07715103": "Cauliflower",
+}
+
 _MIN_FRUIT_PROB = 0.05
 
 
@@ -60,8 +74,6 @@ class FruitGateService:
         Returns (False, top_predicted_label, 0.0) otherwise.
 
         confidence_pct is the summed softmax probability across all fruit synsets (0–100).
-        Summing rather than checking top-1 handles fruits absent from ImageNet-1K whose
-        visual features distribute across nearby in-vocabulary fruit classes.
         """
         if not self.is_loaded:
             raise RuntimeError("Gate model not loaded. Application may still be starting.")
@@ -77,13 +89,16 @@ class FruitGateService:
         top10 = decode_predictions(self._model.predict(arr, verbose=0), top=10)[0]
 
         fruit_prob = sum(p for s, _, p in top10 if s in _FRUIT_SYNSETS)
-        best_fruit = next((lbl for s, lbl, _ in top10 if s in _FRUIT_SYNSETS), None)
+        best_synset = next((s for s, _, _ in top10 if s in _FRUIT_SYNSETS), None)
 
         if fruit_prob >= _MIN_FRUIT_PROB:
-            label = (best_fruit or "fruit").replace("_", " ")
+            label = _SYNSET_LABELS.get(
+                best_synset,
+                (top10[0][1] if top10 else "fruit").replace("_", " ").title(),
+            )
             return True, label, round(fruit_prob * 100, 1)
 
-        top_label = top10[0][1].replace("_", " ") if top10 else "unknown"
+        top_label = top10[0][1].replace("_", " ").title() if top10 else "unknown"
         return False, top_label, 0.0
 
 
